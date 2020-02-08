@@ -1,10 +1,11 @@
 #include <vector>
 #include <stdlib.h>
-#include <iterator>
 #include <iostream>
 #include <time.h>
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 int get_max(vector<int> num_vector)
 {
@@ -26,16 +27,22 @@ int main(int argc, char const *argv[])
 {
     vector<int> test;
     srand(time(NULL));
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 10000; i++)
     {
-        test.push_back(rand() % 50);
+        test.push_back(rand() % 50000);
     }
 
-    for (int i; i < test.size(); i++)
-    {
-        cout << test[i] << " ";
-    }
-    cout << endl;
-    cout << get_max(test) << endl;
+    // for (int i = 0; i < test.size(); i++)
+    // {
+    //     cout << test[i] << " ";
+    // }
+    // cout << endl;
+
+    auto start_time = high_resolution_clock::now();
+    int result = get_max(test);
+    auto stop_time = high_resolution_clock::now();
+
+    cout << "Resultado: " << result << endl;
+    cout << "Duracion: " << duration_cast<microseconds>(stop_time - start_time).count() << endl;
     return 0;
 }

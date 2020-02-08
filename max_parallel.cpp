@@ -4,9 +4,10 @@
 #include <thread>
 #include <future>
 #include <time.h>
-#include <iterator>
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 void get_max(vector<int> num_vector, std::promise<int> &&p)
 {
@@ -41,16 +42,17 @@ int main(int argc, char const *argv[])
         test.push_back(rand() % 100);
     }
 
-    for (int i = 0; i < test.size(); i++)
-    {
-        cout << test[i] << " ";
-    }
-    cout << endl;
+    // for (int i = 0; i < test.size(); i++)
+    // {
+    //     cout << test[i] << " ";
+    // }
+    // cout << endl;
 
     thread mythreads[num_cores];
     promise<int> promises[num_cores], last_promise;
     future<int> futures[num_cores], last_future;
 
+    auto start_time = high_resolution_clock::now();
     for (int n = 0; n < num_cores; n++)
     {
         vector<int> sliced_vector = vector<int>(test.begin() + n * test.size() / num_cores, test.begin() + (n + 1) * test.size() / num_cores);
@@ -70,8 +72,10 @@ int main(int argc, char const *argv[])
 
     last_future = last_promise.get_future();
     get_max(results, move(last_promise));
+    auto stop_time = high_resolution_clock::now();
 
     cout << "Resultado: " << last_future.get() << endl;
+    cout << "Duracion: " << duration_cast<microseconds>(stop_time - start_time).count() << endl;
 
     return 0;
 }
