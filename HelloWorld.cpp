@@ -5,10 +5,11 @@
 #include <thread>
 #include <stdlib.h>
 #include <future>
+#include <vector>
 
 using namespace std;
 
-void my_rank(int rango, std::promise<string> &&p)
+void my_rank(vector<int> test_vector, std::promise<string> &&p)
 {
     // std::cout << "Hola Mundo desde thread " << rango << "\n";
     // std::cout << "---- Waiting ... \n";
@@ -17,8 +18,8 @@ void my_rank(int rango, std::promise<string> &&p)
     {
         /* code */
     }
-    cout << rango << endl;
-    p.set_value(to_string(rango));
+    // cout << rango << endl;
+    p.set_value(to_string(test_vector[0]));
 }
 
 int main()
@@ -27,10 +28,11 @@ int main()
     thread mythreads[num_cores];
     promise<string> mypromises[num_cores];
     future<string> futures[num_cores];
+    vector<int> myvec = {0, 1, 2, 3};
     for (int n = 0; n < num_cores; n++)
     {
         futures[n] = mypromises[n].get_future();
-        mythreads[n] = thread(my_rank, n, move(mypromises[n]));
+        mythreads[n] = thread(my_rank, myvec, move(mypromises[n]));
     }
 
     for (int n = 0; n < num_cores; n++)

@@ -1,24 +1,27 @@
 #include <vector>
 #include <stdlib.h>
-#include <iterator>
 #include <iostream>
-#include <time.h>
 #include <thread>
 #include <future>
+#include <time.h>
+#include <iterator>
 
 using namespace std;
 
-void get_max(vector<int> num_vector, promise<int> &&p)
+void get_max(vector<int> num_vector, std::promise<int> &&p)
 {
     if (num_vector.size() > 2)
     {
-        vector<int> part_1, part2;
+        vector<int> part_1, part_2;
         promise<int> result_1, result_2;
         future<int> future_1 = result_1.get_future();
         future<int> future_2 = result_2.get_future();
 
-        get_max(vector<int>(num_vector.begin(), num_vector.begin() + num_vector.size() / 2), move(result_1));
-        get_max(vector<int>(num_vector.begin() + num_vector.size() / 2, num_vector.end()), move(result_2));
+        part_1 = vector<int>(num_vector.begin(), num_vector.begin() + num_vector.size() / 2);
+        part_2 = vector<int>(num_vector.begin() + num_vector.size() / 2, num_vector.end());
+
+        get_max(part_1, move(result_1));
+        get_max(part_2, move(result_2));
         p.set_value(max(future_1.get(), future_2.get()));
     }
     else
@@ -27,31 +30,27 @@ void get_max(vector<int> num_vector, promise<int> &&p)
     }
 }
 
-// template <class T>
-// vector<vector<T>> slice_vector(vector<T> original_vector, int parts)
-// {
-// }
-
 int main(int argc, char const *argv[])
 {
     const int num_cores = 4;
 
-    vector<int> test;
+    vector<int> test, results;
     srand(time(NULL));
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 40; i++)
     {
-        test.push_back(rand() % 50);
+        test.push_back(rand() % 100);
     }
 
-    for (int i; i < test.size(); i++)
+    for (int i = 0; i < test.size(); i++)
     {
         cout << test[i] << " ";
     }
     cout << endl;
 
     thread mythreads[num_cores];
-    promise<string> promises[num_cores];
-    future<string> futures[num_cores];
+    promise<int> promises[num_cores], last_promise;
+    future<int> futures[num_cores], last_future;
+
     for (int n = 0; n < num_cores; n++)
     {
         vector<int> sliced_vector = vector<int>(test.begin() + n * test.size() / num_cores, test.begin() + (n + 1) * test.size() / num_cores);
@@ -66,8 +65,13 @@ int main(int argc, char const *argv[])
 
     for (int n = 0; n < num_cores; n++)
     {
-        cout << futures[n].get();
+        results.push_back(futures[n].get());
     }
+
+    last_future = last_promise.get_future();
+    get_max(results, move(last_promise));
+
+    cout << "Resultado: " << last_future.get() << endl;
 
     return 0;
 }

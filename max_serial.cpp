@@ -10,7 +10,6 @@ int get_max(vector<int> num_vector)
 {
     if (num_vector.size() > 2)
     {
-        vector<int> part_1, part2;
         int result_1, result_2;
 
         result_1 = get_max(vector<int>(num_vector.begin(), num_vector.begin() + num_vector.size() / 2));
