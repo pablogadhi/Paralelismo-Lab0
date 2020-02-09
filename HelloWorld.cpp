@@ -2,14 +2,52 @@
 // It also contains a trivial example of the use of the thread function.
 
 #include <iostream>
-#include <thread>
+#include "pthread.h"
 #include <stdlib.h>
-#include <future>
 #include <vector>
 
 using namespace std;
 
-void my_rank(vector<int> test_vector, std::promise<string> &&p)
+class Data
+{
+    vector<int> myvector;
+    int result;
+
+public:
+    Data();
+    Data(vector<int>, int);
+    void set_result(int);
+    int get_result();
+    vector<int> get_vector();
+};
+
+Data::Data(vector<int> a, int b)
+{
+    myvector = a;
+    result = b;
+}
+
+Data::Data()
+{
+    myvector = vector<int>();
+}
+
+void Data::set_result(int a)
+{
+    result = a;
+}
+
+int Data::get_result()
+{
+    return result;
+}
+
+vector<int> Data::get_vector()
+{
+    return myvector;
+}
+
+void *my_rank(void *data)
 {
     // std::cout << "Hola Mundo desde thread " << rango << "\n";
     // std::cout << "---- Waiting ... \n";
@@ -19,32 +57,36 @@ void my_rank(vector<int> test_vector, std::promise<string> &&p)
         /* code */
     }
     // cout << rango << endl;
-    p.set_value(to_string(test_vector[0]));
+    Data* casted_data = (Data *)data;
+    (*casted_data).set_result((*casted_data).get_vector()[(*casted_data).get_result()]);
+    pthread_exit(NULL);
 }
 
 int main()
 {
     const int num_cores = 4;
-    thread mythreads[num_cores];
-    promise<string> mypromises[num_cores];
-    future<string> futures[num_cores];
-    vector<int> myvec = {0, 1, 2, 3};
+    pthread_t mythreads[num_cores];
+    // promise<string> mypromises[num_cores];
+    // future<string> futures[num_cores];
+    vector<int> myvec = {5, 4, 3, 2};
+    Data datas[num_cores];
     for (int n = 0; n < num_cores; n++)
     {
-        futures[n] = mypromises[n].get_future();
-        mythreads[n] = thread(my_rank, myvec, move(mypromises[n]));
+        datas[n] = Data(myvec, n);
+        pthread_create(&mythreads[n], NULL, my_rank, (void *)&datas[n]);
     }
 
     for (int n = 0; n < num_cores; n++)
     {
-        mythreads[n].join();
+        pthread_join(mythreads[n], NULL);
     }
 
     for (int n = 0; n < num_cores; n++)
     {
-        cout << futures[n].get();
+        cout << datas[n].get_result() << endl;
     }
 
-    std::cout << "Hello World!\n";
+    pthread_exit(NULL);
+
     return 0;
 }

@@ -1,34 +1,88 @@
 #include <vector>
 #include <stdlib.h>
 #include <iostream>
-#include <thread>
-#include <future>
-#include <time.h>
 #include <chrono>
+#include "pthread.h"
 
 using namespace std;
 using namespace std::chrono;
 
-void get_max(vector<int> num_vector, std::promise<int> &&p)
+class Data
 {
+    vector<int> num_vector;
+    int result;
+    int depth;
+
+public:
+    Data();
+    Data(vector<int>, int, int);
+    void set_result(int);
+    int get_result();
+    vector<int> get_vector();
+    int get_depth();
+};
+
+Data::Data(vector<int> a, int b, int c)
+{
+    num_vector = a;
+    result = b;
+    depth = c;
+}
+
+Data::Data()
+{
+    num_vector = vector<int>();
+    result = -1;
+    depth = 0;
+}
+
+void Data::set_result(int a)
+{
+    result = a;
+}
+
+int Data::get_result()
+{
+    return result;
+}
+
+int Data::get_depth()
+{
+    return depth;
+}
+
+vector<int> Data::get_vector()
+{
+    return num_vector;
+}
+
+void *get_max(void *data)
+{
+    Data *data_p = (Data *)data;
+    vector<int> num_vector = (*data_p).get_vector();
     if (num_vector.size() > 2)
     {
         vector<int> part_1, part_2;
-        promise<int> result_1, result_2;
-        future<int> future_1 = result_1.get_future();
-        future<int> future_2 = result_2.get_future();
+        Data data_1, data_2;
 
         part_1 = vector<int>(num_vector.begin(), num_vector.begin() + num_vector.size() / 2);
         part_2 = vector<int>(num_vector.begin() + num_vector.size() / 2, num_vector.end());
 
-        get_max(part_1, move(result_1));
-        get_max(part_2, move(result_2));
-        p.set_value(max(future_1.get(), future_2.get()));
+        data_1 = Data(part_1, -1, (*data_p).get_depth() + 1);
+        data_2 = Data(part_2, -1, (*data_p).get_depth() + 1);
+
+        get_max((void *)&data_1);
+        get_max((void *)&data_2);
+
+        int max_val = max(data_1.get_result(), data_2.get_result());
+        (*data_p).set_result(max_val);
     }
     else
     {
-        p.set_value(max(num_vector[0], num_vector[1]));
+        (*data_p).set_result(max(num_vector[0], num_vector[1]));
     }
+
+    return (void *)0;
 }
 
 int main(int argc, char const *argv[])
@@ -37,9 +91,9 @@ int main(int argc, char const *argv[])
 
     vector<int> test, results;
     srand(time(NULL));
-    for (int i = 0; i < 40; i++)
+    for (int i = 0; i < 10000; i++)
     {
-        test.push_back(rand() % 100);
+        test.push_back(rand() % 50000);
     }
 
     // for (int i = 0; i < test.size(); i++)
@@ -48,34 +102,39 @@ int main(int argc, char const *argv[])
     // }
     // cout << endl;
 
-    thread mythreads[num_cores];
-    promise<int> promises[num_cores], last_promise;
-    future<int> futures[num_cores], last_future;
+    pthread_t threads[num_cores];
+    Data data[num_cores], last_result;
+
+    for (int n = 0; n < num_cores; n++)
+    {
+        vector<int> vector_slice = vector<int>(test.begin() + n * test.size() / num_cores, test.begin() + (n + 1) * test.size() / num_cores);
+        data[n] = Data(vector_slice, -1, 0);
+    }
 
     auto start_time = high_resolution_clock::now();
     for (int n = 0; n < num_cores; n++)
     {
-        vector<int> sliced_vector = vector<int>(test.begin() + n * test.size() / num_cores, test.begin() + (n + 1) * test.size() / num_cores);
-        futures[n] = promises[n].get_future();
-        mythreads[n] = thread(get_max, sliced_vector, move(promises[n]));
+        pthread_create(&threads[n], NULL, get_max, (void *)&data[n]);
     }
 
     for (int n = 0; n < num_cores; n++)
     {
-        mythreads[n].join();
+        pthread_join(threads[n], NULL);
     }
 
     for (int n = 0; n < num_cores; n++)
     {
-        results.push_back(futures[n].get());
+        results.push_back(data[n].get_result());
     }
 
-    last_future = last_promise.get_future();
-    get_max(results, move(last_promise));
+    last_result = Data(results, -1, 0);
+    get_max((void *)&last_result);
     auto stop_time = high_resolution_clock::now();
 
-    cout << "Resultado: " << last_future.get() << endl;
-    cout << "Duracion: " << duration_cast<microseconds>(stop_time - start_time).count() << endl;
+    std::cout << "Resultado: " << last_result.get_result() << endl;
+    std::cout << "Duracion: " << duration_cast<microseconds>(stop_time - start_time).count() << endl;
+
+    pthread_exit(NULL);
 
     return 0;
 }
